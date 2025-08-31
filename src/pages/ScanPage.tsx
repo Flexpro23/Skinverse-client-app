@@ -152,8 +152,8 @@ const ScanPage: React.FC = () => {
           }
         }
 
-        // Navigate to analysis page
-        navigate('/analysis');
+        // Navigate to analysis-report page
+        navigate('/analysis-report');
       }
     } catch (error) {
       console.error('Error processing analysis:', error);
@@ -532,7 +532,7 @@ const ScanPage: React.FC = () => {
         <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-30">
           <ScanCompleteModal
             capturedImages={capturedImages}
-            onViewAnalysis={() => processAnalysis()}
+            onViewAnalysis={processAnalysis}
             onRetake={resetScan}
           />
         </div>

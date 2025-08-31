@@ -1,11 +1,11 @@
-import React from 'react';
-import { CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '../shared';
 import type { CapturedImage } from '../../store/useAppStore';
 
 export interface ScanCompleteModalProps {
   capturedImages: CapturedImage[];
-  onViewAnalysis: () => void;
+  onViewAnalysis: () => Promise<void>;
   onRetake: () => void;
 }
 
@@ -14,6 +14,17 @@ const ScanCompleteModal: React.FC<ScanCompleteModalProps> = ({
   onViewAnalysis,
   onRetake
 }) => {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const handleViewAnalysis = async () => {
+    setIsAnalyzing(true);
+    try {
+      await onViewAnalysis();
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      setIsAnalyzing(false);
+    }
+  };
   return (
     <div className="max-w-md w-full mx-4">
       <div className="bg-white rounded-lg shadow-xl p-8">
@@ -21,7 +32,9 @@ const ScanCompleteModal: React.FC<ScanCompleteModalProps> = ({
           <CheckCircle className="w-16 h-16 text-clinical-green mx-auto mb-6" />
           <h2 className="text-h2 text-midnight-blue mb-4">Scan Complete!</h2>
           <p className="text-body text-medium-grey mb-8">
-            We've captured all three angles. Your analysis is being processed.
+            {isAnalyzing 
+              ? "Processing your images with AI analysis..." 
+              : "We've captured all three angles. Ready for analysis."}
           </p>
           
           {/* Captured Images Preview */}
@@ -45,14 +58,23 @@ const ScanCompleteModal: React.FC<ScanCompleteModalProps> = ({
             <Button
               variant="primary"
               fullWidth
-              onClick={onViewAnalysis}
+              onClick={handleViewAnalysis}
+              disabled={isAnalyzing}
             >
-              View Analysis
+              {isAnalyzing ? (
+                <div className="flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Analyzing...
+                </div>
+              ) : (
+                "View Analysis"
+              )}
             </Button>
             <Button
               variant="secondary"
               fullWidth
               onClick={onRetake}
+              disabled={isAnalyzing}
             >
               Retake Photos
             </Button>
