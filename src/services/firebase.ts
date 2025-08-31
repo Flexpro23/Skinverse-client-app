@@ -21,7 +21,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 // Prefer long polling to avoid WebChannel Listen 400s in restricted networks / proxies
-export const db = initializeFirestore(app, { experimentalForceLongPolling: true, useFetchStreams: false });
+export const db = initializeFirestore(app, { experimentalForceLongPolling: true });
 export const storage = getStorage(app);
 
 // Initialize Analytics only when supported and measurementId is present

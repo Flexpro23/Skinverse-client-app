@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Camera, CameraOff, RotateCcw, Zap, ZapOff } from 'lucide-react';
 import { IndicatorPill } from '../shared';
 import type { HeadPose, LightingQuality } from '../../utils/visionUtils';
-import { getHeadPoseGuidance } from '../../utils/visionUtils';
 import { useMediaPipeFaceMesh } from '../../hooks/useMediaPipeFaceMesh';
 import type { FaceAnalysisResult } from '../../hooks/useMediaPipeFaceMesh';
 
@@ -40,7 +39,7 @@ const VisionCamera: React.FC<VisionCameraProps> = ({
   
   // Component state
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
   const streamRef = useRef<MediaStream | null>(null);
@@ -218,11 +217,11 @@ const VisionCamera: React.FC<VisionCameraProps> = ({
       lightingQuality: results.lightingQuality || undefined,
       isFaceDetected: results.isFaceDetected,
       // Pass through raw debug values
-      yaw: results.yaw,
-      pitch: results.pitch,
-      roll: results.roll,
-      averageBrightness: results.averageBrightness,
-      standardDeviation: results.standardDeviation
+      yaw: results.yaw ?? 0,
+      pitch: results.pitch ?? 0,
+      roll: results.roll ?? 0,
+      averageBrightness: results.averageBrightness ?? 0,
+      standardDeviation: results.standardDeviation ?? 0
     };
     
     // Reduced logging for performance

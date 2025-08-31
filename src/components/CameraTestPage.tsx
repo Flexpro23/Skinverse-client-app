@@ -8,7 +8,12 @@ const CameraTestPage: React.FC = () => {
   const [currentStatus, setCurrentStatus] = useState<VisionCameraStatus>({
     isAligned: false,
     isLightingGood: false,
-    isFaceDetected: false
+    isFaceDetected: false,
+    yaw: 0,
+    pitch: 0,
+    roll: 0,
+    averageBrightness: 0,
+    standardDeviation: 0
   });
   const [showCamera, setShowCamera] = useState(false);
 
@@ -62,6 +67,7 @@ const CameraTestPage: React.FC = () => {
                     onCapture={handleCapture}
                     onStatusUpdate={handleStatusUpdate}
                     className="w-full h-full"
+                    onReady={() => { /* no-op */ }}
                   />
                 </div>
               </div>

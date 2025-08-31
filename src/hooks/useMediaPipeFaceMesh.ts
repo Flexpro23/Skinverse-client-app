@@ -266,7 +266,7 @@ export const useMediaPipeFaceMesh = (
       console.error('Error processing MediaPipe results:', error);
       setStatus(prev => ({ 
         ...prev, 
-        error: error instanceof Error ? error.message : 'Processing error'
+        error: (error as Error)?.message ?? 'Processing error'
       }));
     }
   }, [canvasRef, overlayCanvasRef, videoRef, enableLandmarkDrawing, onResults, drawLandmarks]);
@@ -328,7 +328,8 @@ export const useMediaPipeFaceMesh = (
       } catch (error) {
         console.error('MediaPipe processing error:', error);
         // Don't flood console with repeated errors
-        if (error.message && !error.message.includes('abort')) {
+        const err = error as Error;
+        if (err.message && !err.message.includes('abort')) {
           console.error('Stopping processing due to critical error');
           isProcessingRef.current = false;
           return;
