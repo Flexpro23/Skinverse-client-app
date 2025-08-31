@@ -1,0 +1,225 @@
+{
+  "documentInfo": {
+    "docId": "SDS-UXB-MVP-1.0",
+    "docName": "Skinverse Design System & UX Blueprint (MVP)",
+    "version": "1.0",
+    "author": "Nexus, AI Co-Founder",
+    "date": "2025-08-30",
+    "status": "Approved for Development",
+    "description": "The single source of truth for the Skinverse MVP, combining the 'Precision Luxury' brand identity with an enhanced UX flow for the Client Capture App and Clinician Dashboard."
+  },
+  "designSystem": {
+    "brandIdentity": {
+      "name": "Precision Luxury",
+      "coreFeeling": "Confident Competence",
+      "logo": {
+        "name": "Aperture Hexagon",
+        "description": "A flat, 2D vector logo. A hexagonal aperture shape in Bronze, with a central spark. Represents the core process: Scan, Analyze, Reveal.",
+        "usage": "Primary logo for all branding, app loading screens, and as a favicon."
+      }
+    },
+    "colorPalette": [
+      { "role": "Primary Text & UI", "name": "Midnight Blue", "hex": "#192A51" },
+      { "role": "Primary Background", "name": "Light Grey", "hex": "#F8F9FA" },
+      { "role": "Accent & Primary CTA", "name": "Bronze", "hex": "#C5A475" },
+      { "role": "System Success", "name": "Clinical Green", "hex": "#2E7D32" },
+      { "role": "System Error", "name": "Alert Red", "hex": "#C62828" },
+      { "role": "Text Secondary", "name": "Medium Grey", "hex": "#6C757D" },
+      { "role": "Borders & Dividers", "name": "Light Border Grey", "hex": "#DEE2E6" }
+    ],
+    "typography": {
+      "fontFamily": "Inter, sans-serif",
+      "scale": [
+        { "level": "H1", "fontWeight": 700, "fontSize": "32px", "usage": "Primary screen titles (e.g., 'Client Intake')" },
+        { "level": "H2", "fontWeight": 600, "fontSize": "24px", "usage": "Section headers, sub-titles" },
+        { "level": "Body", "fontWeight": 400, "fontSize": "18px", "usage": "Main content, paragraph text" },
+        { "level": "Label", "fontWeight": 500, "fontSize": "14px", "usage": "Input field labels, small helper text" },
+        { "level": "Button", "fontWeight": 700, "fontSize": "18px", "usage": "All CTA buttons" }
+      ]
+    },
+    "iconography": {
+      "style": "Thin line, minimalist, with slightly rounded corners for a modern but soft feel.",
+      "color": "Midnight Blue (#192A51)",
+      "librarySuggestion": "Feather Icons"
+    }
+  },
+  "componentLibrary": {
+    "buttons": [
+      {
+        "type": "Primary",
+        "style": {
+          "backgroundColor": "@color.Bronze",
+          "textColor": "@color.MidnightBlue",
+          "border": "none",
+          "borderRadius": "8px",
+          "padding": "16px 32px",
+          "boxShadow": "0 4px 6px rgba(0,0,0,0.1)",
+          "transition": "transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out"
+        },
+        "interaction": {
+          "hover": { "transform": "scale(1.03)", "boxShadow": "0 6px 8px rgba(0,0,0,0.15)" },
+          "active": { "transform": "scale(0.98)" }
+        }
+      },
+      {
+        "type": "Secondary",
+        "style": {
+          "backgroundColor": "transparent",
+          "textColor": "@color.MidnightBlue",
+          "border": "2px solid @color.MidnightBlue",
+          "borderRadius": "8px",
+          "padding": "14px 32px",
+          "transition": "background-color 0.1s ease-in-out"
+        },
+        "interaction": {
+          "hover": { "backgroundColor": "rgba(25, 42, 81, 0.05)" },
+          "active": { "backgroundColor": "rgba(25, 42, 81, 0.1)" }
+        }
+      }
+    ],
+    "inputFields": [
+      {
+        "state": "Default",
+        "style": {
+          "backgroundColor": "#FFFFFF",
+          "border": "1px solid @color.LightBorderGrey",
+          "borderRadius": "8px",
+          "padding": "16px",
+          "textColor": "@color.MidnightBlue",
+          "fontSize": "@typography.Body.fontSize"
+        }
+      },
+      {
+        "state": "Active/Focus",
+        "style": { "border": "2px solid @color.Bronze", "boxShadow": "0 0 0 3px rgba(197, 164, 117, 0.2)" }
+      },
+      {
+        "state": "Error",
+        "style": { "border": "2px solid @color.AlertRed" }
+      }
+    ]
+  },
+  "uxBlueprint": {
+    "clientApp": {
+      "platform": "iPad",
+      "flow": [
+        {
+          "screenId": "1.0",
+          "screenName": "Welcome / Home",
+          "purpose": "First-touch screen for clinic staff. Allows for new client intake or a quick demo.",
+          "components": [
+            { "type": "Logo", "content": "Skinverse Aperture Logo", "position": "Top Center", "margin": "48px 0" },
+            { "type": "Header", "level": "H1", "text": "Client Intake", "color": "@color.MidnightBlue" },
+            { "type": "Header", "level": "Body", "text": "Enter client details to begin a new scan.", "color": "@color.MediumGrey" },
+            { "type": "Input", "id": "phone", "label": "Client Phone Number", "placeholder": "+1 (555) 123-4567", "autocomplete": true },
+            { "type": "Input", "id": "firstName", "label": "First Name", "placeholder": "Jane" },
+            { "type": "Input", "id": "lastName", "label": "Last Name", "placeholder": "Doe" },
+            { "type": "Button", "variant": "Primary", "text": "Prepare for Client", "action": "CHECK_PHONE_AND_NAVIGATE" },
+            { "type": "Button", "variant": "Secondary", "text": "Run Guest Scan", "action": "NAVIGATE_TO_2.0_GUEST_MODE" }
+          ]
+        },
+        {
+          "screenId": "1.1",
+          "screenName": "Personalized Client Welcome",
+          "purpose": "The first screen the client sees, personalized by the receptionist.",
+          "components": [
+            { "type": "Header", "level": "H1", "text": "Welcome, {{client.firstName}}.", "color": "@color.MidnightBlue" },
+            { "type": "Header", "level": "Body", "text": "We'll begin with a quick, precise scan to understand your skin's unique needs.", "color": "@color.MediumGrey" },
+            { "type": "Button", "variant": "Primary", "text": "Start My Scan", "action": "NAVIGATE_TO_2.0" }
+          ]
+        },
+        {
+          "screenId": "1.2",
+          "screenName": "OTP Authentication (Returning Client)",
+          "purpose": "To securely log in a returning client.",
+          "components": [
+            { "type": "Header", "level": "H2", "text": "Welcome back, {{client.firstName}}.", "color": "@color.MidnightBlue" },
+            { "type": "Header", "level": "Body", "text": "We've sent a 6-digit code to your number.", "color": "@color.MediumGrey" },
+            { "type": "Input", "id": "otp", "label": "Verification Code", "placeholder": "123456" },
+            { "type": "Button", "variant": "Primary", "text": "Continue to Scan", "action": "AUTHENTICATE_AND_NAVIGATE_TO_2.0" }
+          ]
+        },
+        {
+          "screenId": "2.0",
+          "screenName": "Guided Image Capture",
+          "purpose": "Core interactive step. Must be intuitive and foolproof.",
+          "components": [
+            { "type": "CameraView", "facing": "front" },
+            { "type": "Overlay", "shape": "FaceOutline", "color": "@color.ClinicalGreen", "opacity": 0.5 },
+            { "type": "Indicator", "id": "posIndicator", "label": "Face Position", "states": ["Align with mask", "Perfect! Hold still"], "status": "default" },
+            { "type": "Indicator", "id": "lightIndicator", "label": "Lighting", "states": ["Needs more light", "Good"], "status": "default" },
+            { "type": "InstructionText", "id": "scanInstruction", "text": "Please align your face using the guides." },
+            { "type": "ProgressIndicator", "id": "scanProgress", "type": "Arc", "steps": 3, "color": "@color.Bronze", "description": "Shows 1/3, 2/3, 3/3 of scans completed" }
+          ],
+          "logic": "Auto-captures center, left, and right images when indicators are green. Progress arc fills with each capture."
+        },
+        {
+          "screenId": "3.0",
+          "screenName": "Analysis & Engagement",
+          "purpose": "Make the technical wait time feel valuable and professional.",
+          "components": [
+            { "type": "AnimatedLogo", "logo": "Aperture Logo", "animation": "SubtlePulse", "color": "@color.Bronze" },
+            { "type": "Header", "level": "H2", "text": "Analyzing...", "color": "@color.MidnightBlue" },
+            { "type": "DynamicText", "id": "funFacts", "content": ["Did you know? Your skin renews itself every 28 days.", "Hydration is key to skin elasticity and glow."], "transition": "Fade" }
+          ]
+        },
+        {
+          "screenId": "4.0",
+          "screenName": "Dynamic Handoff",
+          "purpose": "Clearly end the client's interaction and transition to the clinician.",
+          "components": [
+            { "type": "Icon", "name": "CheckmarkCircle", "color": "@color.ClinicalGreen", "size": "64px" },
+            { "type": "Header", "level": "H1", "text": "Analysis Complete", "color": "@color.MidnightBlue" },
+            { "type": "Header", "level": "Body", "text": "Please hand the tablet back to the receptionist. Dr. {{clinician.name}} will be ready for you shortly.", "color": "@color.MediumGrey" }
+          ]
+        },
+        {
+          "screenId": "5.0",
+          "screenName": "Error State",
+          "purpose": "Handle any failures gracefully.",
+          "components": [
+            { "type": "Icon", "name": "AlertTriangle", "color": "@color.AlertRed", "size": "64px" },
+            { "type": "Header", "level": "H2", "text": "We've hit a small snag.", "color": "@color.MidnightBlue" },
+            { "type": "Header", "level": "Body", "text": "Not to worry, our team is here to help. Please hand the tablet to the receptionist.", "color": "@color.MediumGrey" }
+          ]
+        }
+      ]
+    },
+    "clinicianDashboard": {
+      "platform": "Web Application",
+      "layout": "Two-column: Left (Queue), Right (Detail View)",
+      "flow": [
+        {
+          "screenId": "C-1.0",
+          "screenName": "Dashboard - Client Queue",
+          "purpose": "Show clinicians a real-time list of clients ready for consultation.",
+          "components": [
+            { "type": "Header", "level": "H1", "text": "Consultation Queue" },
+            { "type": "Filters", "options": ["Today", "Waiting", "Completed"] },
+            { "type": "ClientList", "items": [
+                { "id": "client1", "name": "Jane Doe", "status": "Ready", "scanTime": "2 min ago" },
+                { "id": "client2", "name": "John Smith", "status": "Completed", "scanTime": "15 min ago" }
+            ]}
+          ],
+          "interaction": "Clicking a client in the list loads their data into the right column (C-2.0)."
+        },
+        {
+          "screenId": "C-2.0",
+          "screenName": "Dashboard - Consultation View",
+          "purpose": "Display all captured data for a single client to power the consultation.",
+          "components": [
+            { "type": "Header", "level": "H2", "text": "Analysis for {{client.fullName}}" },
+            { "type": "ImageGallery", "images": ["{{client.imageCenter}}", "{{client.imageLeft}}", "{{client.imageRight}}"], "style": "Prominent display with thin borders" },
+            { "type": "DataCardGrid", "cards": [
+              { "title": "Skin Health Score", "value": "82/100", "icon": "Shield" },
+              { "title": "Estimated Skin Age", "value": "35", "icon": "Gift" },
+              { "title": "Primary Concern", "value": "Puffy Eyes", "icon": "Eye" },
+              { "title": "Skin Type", "value": "Combination", "icon": "Layers" }
+            ]}
+          ],
+          "logic": "The data displayed here is the summarized insights from the AI model."
+        }
+      ]
+    }
+  }
+}

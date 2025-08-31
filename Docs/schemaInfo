@@ -1,0 +1,87 @@
+{
+  "schemaInfo": {
+    "schemaName": "Skinverse Firestore Data Schema",
+    "version": "1.0",
+    "author": "Nexus, AI Co-Founder",
+    "database": "Firebase Firestore",
+    "description": "This document defines the collection and document structure for the Skinverse application. It uses a nested structure to ensure data is logically partitioned by clinic and client, which is optimal for security rules and targeted queries. Large binary files like images are stored in Firebase Storage, with only the reference URLs stored in Firestore documents."
+  },
+  "collections": {
+    "clinics": {
+      "path": "/clinics/{clinicId}",
+      "description": "Top-level collection. Each document represents a foundational partner clinic.",
+      "documentSchema": {
+        "name": { "type": "string", "description": "The official name of the clinic (e.g., 'Elysian Aesthetics Dubai')." },
+        "createdAt": { "type": "timestamp", "description": "Server timestamp when the clinic was first onboarded." },
+        "updatedAt": { "type": "timestamp", "description": "Server timestamp of the last modification to the clinic's details." },
+        "subscriptionTier": { "type": "string", "enum": ["foundational_partner", "growth_tier"], "description": "The current subscription level of the clinic." },
+        "address": {
+          "type": "map",
+          "description": "The physical address of the clinic.",
+          "fields": {
+            "street": { "type": "string" },
+            "city": { "type": "string" },
+            "country": { "type": "string" }
+          }
+        }
+      },
+      "subcollections": {
+        "clients": {
+          "path": "/clinics/{clinicId}/clients/{clientId}",
+          "description": "Sub-collection within a clinic. Each document represents a unique client who has used the Skinverse app at that clinic.",
+          "documentSchema": {
+            "firstName": { "type": "string", "description": "Client's first name, captured at intake." },
+            "lastName": { "type": "string", "description": "Client's last name, captured at intake." },
+            "phone": { "type": "string", "description": "Client's phone number, used as the primary identifier for login." },
+            "email": { "type": "string", "description": "Client's optional email address." },
+            "createdAt": { "type": "timestamp", "description": "Server timestamp of the client's first scan/visit." },
+            "lastSeenAt": { "type": "timestamp", "description": "Server timestamp of the client's most recent scan, used for sorting on the dashboard." }
+          },
+          "subcollections": {
+            "scans": {
+              "path": "/clinics/{clinicId}/clients/{clientId}/scans/{scanId}",
+              "description": "Sub-collection within a client. Each document represents a single scanning session.",
+              "documentSchema": {
+                "createdAt": { "type": "timestamp", "description": "Server timestamp when the scan was initiated. This is the primary field for chronological sorting." },
+                "performedByDevice": { "type": "string", "description": "An identifier for the physical iPad used for the scan (e.g., 'iPad-WaitingRoom-1'). Useful for debugging." },
+                "imageUrls": {
+                  "type": "map",
+                  "description": "URLs pointing to the high-resolution images stored in Firebase Storage. DO NOT store image data directly in Firestore.",
+                  "storagePath": "/scans/{clinicId}/{clientId}/{scanId}/",
+                  "fields": {
+                    "center": { "type": "string", "description": "URL to the front-facing image." },
+                    "left": { "type": "string", "description": "URL to the left-profile image." },
+                    "right": { "type": "string", "description": "URL to the right-profile image." }
+                  }
+                },
+                "analysisResult": {
+                  "type": "map",
+                  "description": "The structured JSON object returned from the Gemini API analysis.",
+                  "fields": {
+                    "skinHealthScore": { "type": "number", "description": "An overall score from 0-100." },
+                    "estimatedSkinAge": { "type": "number", "description": "The estimated age of the skin." },
+                    "primaryConcern": { "type": "string", "description": "The main concern identified by the AI (e.g., 'Puffy Eyes', 'Fine Lines')." },
+                    "skinType": { "type": "string", "description": "The skin type identified by the AI (e.g., 'Combination', 'Oily')." }
+                  }
+                },
+                "clinicianNotes": { "type": "string", "description": "A text field for clinicians to add notes during or after the consultation. Initially empty." }
+              }
+            }
+          }
+        }
+      }
+    },
+    "users": {
+      "path": "/users/{userId}",
+      "description": "Top-level collection for all staff users (clinicians, receptionists). The document ID '{userId}' MUST match the user's Firebase Authentication UID.",
+      "documentSchema": {
+        "clinicId": { "type": "reference", "path": "/clinics/{clinicId}", "description": "A reference to the clinic this user belongs to. Crucial for security rules." },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "email": { "type": "string", "description": "The user's login email." },
+        "role": { "type": "string", "enum": ["clinician", "receptionist", "admin"], "description": "Defines the user's permissions within the application." },
+        "createdAt": { "type": "timestamp", "description": "Server timestamp when the user account was created." }
+      }
+    }
+  }
+}

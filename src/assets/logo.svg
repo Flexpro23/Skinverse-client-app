@@ -1,0 +1,21 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Bronze Aperture Hexagon Logo -->
+  <g transform="translate(100,100)">
+    <!-- Hexagon aperture blades -->
+    <g fill="#C5A475" stroke="none">
+      <!-- Top blade -->
+      <path d="M 0,-60 L 20,-40 L 20,-20 L 0,-20 Z" transform="rotate(0)"/>
+      <path d="M 0,-60 L 20,-40 L 20,-20 L 0,-20 Z" transform="rotate(60)"/>
+      <path d="M 0,-60 L 20,-40 L 20,-20 L 0,-20 Z" transform="rotate(120)"/>
+      <path d="M 0,-60 L 20,-40 L 20,-20 L 0,-20 Z" transform="rotate(180)"/>
+      <path d="M 0,-60 L 20,-40 L 20,-20 L 0,-20 Z" transform="rotate(240)"/>
+      <path d="M 0,-60 L 20,-40 L 20,-20 L 0,-20 Z" transform="rotate(300)"/>
+    </g>
+    
+    <!-- Central spark -->
+    <g fill="#C5A475">
+      <path d="M 0,-8 L 2,-2 L 8,0 L 2,2 L 0,8 L -2,2 L -8,0 L -2,-2 Z"/>
+    </g>
+  </g>
+</svg>
+

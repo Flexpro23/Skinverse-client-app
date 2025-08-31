@@ -1,0 +1,88 @@
+### **PRD-001: In-Clinic Client Capture & Consultation Dashboard (MVP)**
+
+*   **Product:** Skinverse Clinic OS
+*   **Version:** 1.0
+*   **Status:** Scoped for Development
+*   **Author:** Nexus (AI Co-Founder), Ali Odat (CEO)
+*   **Date:** August 29, 2025
+
+#### **1. Overview & Problem Statement**
+
+Aesthetics clinics struggle with inefficient client intake processes and a "confidence deficit" when converting high-value consultations. The current paper-based or disjointed digital methods fail to create a professional, data-driven first impression.
+
+This feature, the **Client Capture App (iPad)** and the corresponding **Consultation Dashboard (Web)**, is the "front door" to the Skinverse ecosystem. It replaces the clipboard with a sophisticated, guided imaging experience that seamlessly provides the clinician with the objective data they need to build trust, demonstrate expertise, and create compelling treatment plans from the very first interaction.
+
+#### **2. Goals & Success Metrics**
+
+*   **Primary Goal (GTM):** Create a functional, high-impact "wow-factor" MVP to successfully onboard our first 5 Foundational Partners.
+*   **Secondary Goal (Product):** Validate the core workflow of in-clinic client data capture → real-time clinician review.
+*   **Key Success Metric:** >80% of demoed "Ideal Partner Profile" clinics express that the tool is "impressive" or "a significant upgrade" and agree to sign the Foundational Partner Agreement.
+*   **Technical Metric:** The end-to-end flow from a client completing a scan to the results appearing on the clinician's dashboard takes less than 15 seconds.
+
+#### **3. Scope & Phasing**
+
+**IN SCOPE (MVP v1.0):**
+
+*   An iPad-native application for client-facing use.
+*   A secure, simple web application for the clinician's dashboard.
+*   Phone number-based authentication (New User Signup / Returning User OTP).
+*   A guided, three-photo capture sequence (Center, Left, Right).
+*   Real-time on-screen guides for **lighting** and **head positioning**.
+*   Integration of the existing B2C AI analysis model to process the three images.
+*   A client-facing "waiting" screen during analysis and a simple "handoff" confirmation screen.
+*   A real-time clinician dashboard that displays a queue of completed scans.
+*   A detailed view for each client showing their name, the three captured images, and the AI analysis results.
+
+**OUT OF SCOPE (for now):**
+
+*   Android / mobile phone versions of the Client Capture App.
+*   Appointment scheduling, billing, or any other operational features.
+*   Storing and comparing multiple scans over time (no progress tracking yet).
+*   Clinician ability to edit/annotate images.
+*   Any B2C Public App features.
+
+---
+
+#### **4. User Stories**
+
+#### **Epic 1: Client Onboarding & Authentication (iPad App)**
+*   **User Story 1.1:** As a Clinic Receptionist, I want to launch the app on an iPad and see a clean welcome screen, ready to hand to a new client.
+*   **User Story 1.2:** As a Client, I want to enter my phone number.
+*   **User Story 1.3 (New Client):** If my number is not found, I want to be prompted to enter my First Name and Last Name to create a simple profile.
+*   **User Story 1.4 (Returning Client):** If my number is found, I want to receive a one-time password (OTP) via SMS and enter it to log in, so the system knows who I am.
+
+#### **Epic 2: Guided Image Capture (iPad App)**
+*   **User Story 2.1:** As a Client, I want to see a single, obvious "Start Scan" button after completing my profile/login.
+*   **User Story 2.2:** As a Client, I want the front-facing camera to open with a mask overlay and two real-time indicators: "Face Position" and "Lighting."
+*   **User Story 2.3:** As a Client, I want the indicators to change color (e.g., from Red to Green) and text (e.g., "Too dark" to "Good") as I adjust my face and lighting, so I know exactly how to position myself.
+*   **User Story 2.4:** As a Client, I want the app to automatically take the first (center) picture once both indicators are green for 2 seconds, ensuring a high-quality capture.
+*   **User Story 2.5:** As a Client, after the first capture, I want to see a simple on-screen prompt (e.g., "Now, slowly turn your head to the left") and have the app automatically capture the second and third images when the angle is correct.
+
+#### **Epic 3: AI Analysis & Handoff (iPad App)**
+*   **User Story 3.1:** As a Client, after the three images are captured, I want to see a visually engaging loading screen that displays fun facts about skincare, making the wait pleasant.
+*   **User Story 3.2:** As a Client, once the analysis is complete, I want to see a final confirmation screen with a simple, reassuring message: *"Analysis complete! [Clinician's Name] will be with you shortly to discuss your results."*
+*   **User Story 3.3:** As a System, I need to upload the three raw images and the client's profile information to our secure database.
+*   **User Story 3.4:** As a System, I need to send the images to our AI analysis engine and store the returned results (e.g., skin type, puffy eyes, etc.) associated with that client's session.
+
+#### **Epic 4: Consultation Dashboard (Clinician Web App)**
+*   **User Story 4.1:** As a Clinician, I want to log in to a secure web portal using my email and password.
+*   **User Story 4.2:** As a Clinician, I want to see a main dashboard with a list of clients, ordered by who completed their scan most recently, with a status of "Ready for Consultation."
+*   **User Story 4.3:** As a Clinician, I want to click on a client's name and be taken to a dedicated "Consultation View."
+*   **User Story 4.4:** In the Consultation View, I want to see the client's name at the top, their three high-resolution images displayed prominently side-by-side, and the key findings from the AI analysis listed clearly (e.g., "Skin Type: Combination," "Concern Area: Puffy Eyes").
+
+---
+
+#### **5. User Flow**
+
+1.  **Clinic Receptionist** hands the iPad to the **Client**.
+2.  **Client** enters their phone number.
+    *   *New Client:* Enters Name.
+    *   *Returning Client:* Enters OTP.
+3.  **Client** presses "Start Scan."
+4.  The camera UI launches. The **Client** aligns their face and adjusts to room lighting using the on-screen guides.
+5.  The app auto-captures Center, Left, and Right photos.
+6.  The "Analyzing..." screen is displayed to the **Client**.
+7.  Simultaneously, the images and profile data are sent to the server. The analysis is performed.
+8.  The **Clinician**, on their computer, sees the Client's name appear at the top of their Consultation Dashboard with a "Ready" status.
+9.  The **Client** sees the "Complete" screen on the iPad and hands it back to the receptionist.
+10. The **Clinician** clicks the client's name to open the results, reviews the images and analysis, and is fully prepared when the client is brought into the consultation room.
