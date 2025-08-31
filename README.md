@@ -1,69 +1,44 @@
-# React + TypeScript + Vite
+# SkinVerse Clinic - Client App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Production-ready Vite + React + TypeScript app configured for Vercel deployment.
 
-Currently, two official plugins are available:
+## Local Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. Install dependencies:
+   - `npm install`
+2. Create `.env` from `.env.example` and fill values:
+   - `cp .env.example .env`
+3. Start dev server:
+   - `npm run dev`
 
-## Expanding the ESLint configuration
+## Build
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- `npm run build` → outputs to `dist/`
+- `npm run preview` → local preview of production build
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Environment Variables
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+Configure these in `.env` (and in Vercel Project Settings → Environment Variables):
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+- `VITE_FIREBASE_MEASUREMENT_ID`
+- `VITE_GEMINI_API_KEY`
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Vercel Deployment
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- Repo is ready with `vercel.json`:
+  - `buildCommand`: `npm run build`
+  - `outputDirectory`: `dist`
+  - SPA routing fallback to `index.html`
+- `package.json` sets Node engines `>=18`.
+- Import the GitHub repo into Vercel, set the env vars above, and Deploy.
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Notes
+
+- Uses Firebase Web SDK v12; Firestore uses `experimentalForceLongPolling` for broader network compatibility.
+- Media processing handled via MediaPipe with performance-conscious loops.

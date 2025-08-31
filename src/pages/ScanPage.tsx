@@ -1,13 +1,17 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Camera, CheckCircle } from 'lucide-react';
-import VisionCamera from '../components/camera/VisionCamera';
-import type { VisionCameraStatus } from '../components/camera/VisionCamera';
-import { Button, IndicatorPill, AnimatedLogo } from '../components/shared';
+import { ArrowLeft } from 'lucide-react';
+import DisplayCamera from '../components/camera/DisplayCamera';
+import ProcessingEngine from '../components/camera/ProcessingEngine';
+import type { VisionStatus } from '../components/camera/ProcessingEngine';
+import CameraOverlayUI from '../components/camera/CameraOverlayUI';
+import ScanCompleteModal from '../components/camera/ScanCompleteModal';
+import { AnimatedLogo } from '../components/shared';
 import { useAppActions, useClientInfo, useCapturedImages, useCurrentCaptureStep } from '../store/useAppStore';
 import { fileToBase64, getSkinAnalysis } from '../api/gemini';
 
 type CapturePosition = 'center' | 'left' | 'right';
+type ScanStage = 'alignment' | 'capture';
 
 const ScanPage: React.FC = () => {
   const navigate = useNavigate();
@@ -23,78 +27,77 @@ const ScanPage: React.FC = () => {
     clearCapturedImages
   } = useAppActions();
 
-  // Local state
-  const [currentStatus, setCurrentStatus] = useState<VisionCameraStatus>({
-    isAligned: false,
-    isLightingGood: false,
-    isFaceDetected: false,
-    // Initialize debug values to prevent .toFixed() crashes
-    yaw: 0,
-    pitch: 0,
-    roll: 0,
-    averageBrightness: 0,
-    standardDeviation: 0
-  });
+  // Master scan stage state - Phase 16
+  const [scanStage, setScanStage] = useState<ScanStage>('alignment');
+  
+  // GO/NO-GO Final: User-controlled ready state - No scanning until user clicks "I'm Ready"
+  const [isReady, setIsReady] = useState(false);
+  
+  // Ref-based communication with ProcessingEngine - No re-renders
+  const visionStatusRef = useRef<VisionStatus | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCameraReady, setCameraReady] = useState(false);
   const [capturePositions] = useState<CapturePosition[]>(['center', 'left', 'right']);
-  const [instructions, setInstructions] = useState<string>('Position your face in the center frame');
-  const [showHelpMessage, setShowHelpMessage] = useState(false);
-  const helpTimerRef = useRef<number | null>(null);
+  
+  // State for landmarks to ensure face mesh updates across all stages
+  const [currentLandmarks, setCurrentLandmarks] = useState<any[] | null>(null);
+  
+  // Stability Engine - Phase 12
+  const stabilityCounterRef = useRef(0);
+  const [stableStatus, setStableStatus] = useState({ isReady: false });
+  const [stabilityProgress, setStabilityProgress] = useState(0);
+  const captureLockRef = useRef(false);
+  
+
+  
+  // Shutter flash state for professional capture feedback
+  const [isFlashing, setFlashing] = useState(false);
+  
+  // Scan completion state for persistent layout
+  const [isScanComplete, setIsScanComplete] = useState(false);
+  
+  // Refs for automatic capture
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // Bad frame buffer for resilient stability engine
+  const badFrameCounterRef = useRef(0);
 
   // Current capture position
   const currentPosition = capturePositions[currentCaptureStep] || 'center';
   const isComplete = currentCaptureStep >= capturePositions.length;
 
-  // Update instructions based on current position
-  useEffect(() => {
-    switch (currentPosition) {
+  // GO/NO-GO Final: Curved Line Alignment System - Left/Right comparison logic
+  const isNoseAlignedWithTarget = useCallback((landmarks: any[], requiredPosition: CapturePosition): boolean => {
+    if (!landmarks || landmarks.length === 0) return false;
+    
+    // Get nose tip position (MediaPipe landmark index 1)
+    const noseTip = landmarks[1];
+    if (!noseTip) return false;
+    
+    // Convert normalized coordinates to screen coordinates
+    const noseX = noseTip.x * window.innerWidth;
+    
+    // Even closer target positions with >= comparison for curved lines
+    switch (requiredPosition) {
       case 'center':
-        setInstructions('Look straight ahead into the camera');
-        break;
+        const centerTarget = window.innerWidth * 0.5;
+        const tolerance = 50; // Smaller tolerance for center
+        return Math.abs(noseX - centerTarget) < tolerance;
       case 'left':
-        setInstructions('Turn your head to show your left profile');
-        break;
+        const leftTarget = window.innerWidth * 0.4; // Even closer to center
+        return noseX <= leftTarget; // When nose reaches or goes past the curved line
       case 'right':
-        setInstructions('Turn your head to show your right profile');
-        break;
+        const rightTarget = window.innerWidth * 0.6; // Even closer to center
+        return noseX >= rightTarget; // When nose reaches or goes past the curved line
       default:
-        setInstructions('Position your face in the frame');
+        return false;
     }
-  }, [currentPosition]);
-
-  // No-face-detected timeout handler (15s)
-  useEffect(() => {
-    if (helpTimerRef.current) {
-      clearTimeout(helpTimerRef.current);
-    }
-    setShowHelpMessage(false);
-    helpTimerRef.current = window.setTimeout(() => {
-      setShowHelpMessage(true);
-    }, 15000);
-
-    return () => {
-      if (helpTimerRef.current) {
-        clearTimeout(helpTimerRef.current);
-        helpTimerRef.current = null;
-      }
-    };
-  }, [currentPosition, capturedImages.length]);
-
-  // Handle status updates from camera - Fixed stale closure bug
-  const handleStatusUpdate = useCallback((status: VisionCameraStatus) => {
-    // Only log significant changes to prevent console flooding
-    setCurrentStatus(prev => {
-      if (!prev.isFaceDetected && status.isFaceDetected) {
-        console.log('✅ Face detected!');
-      } else if (prev.isFaceDetected && !status.isFaceDetected) {
-        console.log('❌ Face lost!');
-      }
-      return status;
-    });
   }, []);
 
-  // Process skin analysis with Gemini
+
+
+  // Process skin analysis with Gemini - stabilized with useCallback
   const processAnalysis = useCallback(async () => {
     if (capturedImages.length < 3) return;
 
@@ -160,9 +163,11 @@ const ScanPage: React.FC = () => {
     }
   }, [capturedImages, clientInfo, setAnalysisResult, setAppStatus, navigate]);
 
-  // Handle image capture
+  // Handle image capture - stabilized to prevent re-renders
   const handleCapture = useCallback(async (imageData: string) => {
     try {
+      console.log('📸 Silent capture initiated');
+      
       // Convert data URL to blob for processing
       const response = await fetch(imageData);
       const blob = await response.blob();
@@ -175,26 +180,174 @@ const ScanPage: React.FC = () => {
         timestamp: Date.now()
       });
 
-      // Reset the help timer upon successful capture
-      if (helpTimerRef.current) {
-        clearTimeout(helpTimerRef.current);
-        helpTimerRef.current = null;
-      }
-      setShowHelpMessage(false);
+
 
       // Move to next step
       const nextStep = currentCaptureStep + 1;
       setCurrentCaptureStep(nextStep);
 
-      // If all captures complete, process analysis
+      // If all captures complete, show completion modal
       if (nextStep >= capturePositions.length) {
-        await processAnalysis();
+        setIsScanComplete(true);
       }
+      
+      console.log('✅ Silent capture completed');
     } catch (error) {
       console.error('Error capturing image:', error);
       setAppStatus('error');
     }
   }, [currentPosition, currentCaptureStep, addCapturedImage, setCurrentCaptureStep, setAppStatus, capturePositions.length, processAnalysis]);
+
+  // Silent Automatic Capture with Shutter Flash - Phase 14 (Modified for Phase 16)
+  useEffect(() => {
+    if (stableStatus.isReady && !captureLockRef.current && !isComplete && scanStage === 'capture') {
+      console.log('🔥 SILENT AUTOMATIC CAPTURE TRIGGERED!');
+      captureLockRef.current = true; // Prevent multiple captures
+      
+      // Trigger shutter flash effect
+      setFlashing(true);
+      
+      // Add a small delay to ensure frame stability
+      setTimeout(() => {
+        if (videoRef.current && canvasRef.current) {
+          const video = videoRef.current;
+          const canvas = canvasRef.current;
+          const context = canvas.getContext('2d');
+          
+          if (context) {
+            // Set canvas dimensions to match video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Draw current video frame to canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Get image data as base64
+            const imageData = canvas.toDataURL('image/jpeg', 0.9);
+            
+            // Silent capture (no re-render)
+            handleCapture(imageData);
+          }
+        }
+        
+        // Turn off shutter flash after brief duration
+        setTimeout(() => setFlashing(false), 150);
+      }, 100); // Small delay to ensure frame stability
+    }
+  }, [stableStatus.isReady, currentCaptureStep, isComplete, handleCapture, scanStage]);
+
+  // Reset capture lock when changing steps
+  useEffect(() => {
+    captureLockRef.current = false;
+    stabilityCounterRef.current = 0;
+    badFrameCounterRef.current = 0;
+    setStableStatus({ isReady: false });
+    setStabilityProgress(0);
+    setFlashing(false); // Ensure no flash state persists
+    
+    // Reset to alignment stage when starting new capture step
+    if (currentCaptureStep === 0) {
+      setScanStage('alignment');
+    }
+  }, [currentCaptureStep]);
+
+  // GO/NO-GO Final: Enhanced Position-Aware Stability Engine  
+  useEffect(() => {
+    // Don't start stability engine until user is ready
+    if (!isReady) return;
+    
+    const intervalId = setInterval(() => {
+      const status = visionStatusRef.current;
+      if (!status) return;
+      const s = status; // Non-null after guard
+
+
+
+      // Update landmarks state for face mesh rendering across all stages
+      if (s.landmarks && s.landmarks !== currentLandmarks) {
+        setCurrentLandmarks(s.landmarks);
+      }
+      
+      // GO/NO-GO Final: Facial Anchor Line alignment checking - NEW GUIDANCE SYSTEM
+      const isNoseAligned = s.landmarks ? isNoseAlignedWithTarget(s.landmarks, currentPosition) : false;
+      const allConditionsMet = s.isFaceDetected && s.isLightingGood && isNoseAligned;
+      
+      // Debug logging completely disabled to prevent console spam
+      // Only log on successful captures or significant state changes
+      if (false) { // Disabled logging
+        console.log(`🔍 Facial Anchor Capture Conditions for ${currentPosition}:`, {
+          faceDetected: s.isFaceDetected,
+          lightingGood: s.isLightingGood,
+          noseAligned: isNoseAligned,
+          hasLandmarks: !!s.landmarks,
+          allMet: allConditionsMet
+        });
+      }
+      
+      if (allConditionsMet) {
+        // Good conditions - reset bad frame counter and increment stability
+        badFrameCounterRef.current = 0;
+        stabilityCounterRef.current += 1;
+        // GO/NO-GO Final: Increased threshold to 45 frames (1.5 seconds at 30fps)
+        const newProgress = Math.min(100, Math.round((stabilityCounterRef.current / 45) * 100));
+        setStabilityProgress(newProgress);
+        
+        // Only log significant milestones to reduce console noise
+        if (stabilityCounterRef.current % 10 === 0 || stabilityCounterRef.current >= 45) {
+          console.log(`🎯 Position-Aware Stability: ${stabilityCounterRef.current}/45 (${newProgress}%) - ${currentPosition}`);
+        }
+      } else {
+        // Bad conditions - use buffer to forgive momentary issues
+        badFrameCounterRef.current += 1;
+        
+        // Only reset stability if we have sustained bad frames (> 3)
+        if (badFrameCounterRef.current > 3) {
+          if (stabilityCounterRef.current > 0) {
+            stabilityCounterRef.current = Math.max(0, stabilityCounterRef.current - 2);
+            const newProgress = Math.round((stabilityCounterRef.current / 45) * 100);
+            setStabilityProgress(newProgress);
+            
+            if (stabilityCounterRef.current === 0) {
+              console.log(`❌ Position stability lost for ${currentPosition} - counter reset after buffer`);
+              badFrameCounterRef.current = 0; // Reset bad frame counter
+            }
+          }
+        }
+        // If bad frame counter <= 3, we "forgive" and don't reset stability
+      }
+
+      // GO/NO-GO Final: Check threshold (45 frames = 1.5 seconds at 30fps)
+      if (stabilityCounterRef.current >= 45) {
+        if (!stableStatus.isReady) {
+          if (scanStage === 'alignment') {
+            console.log('🟢 ALIGNMENT STAGE COMPLETE - Transitioning to Capture!');
+            setStableStatus({ isReady: true });
+            // Transition to capture stage after stable alignment
+            setTimeout(() => {
+              setScanStage('capture');
+              console.log('🎯 ENTERING CAPTURE STAGE');
+            }, 500); // Small delay for smooth transition
+          } else if (scanStage === 'capture') {
+            console.log(`🟢 CAPTURE STAGE - Ready for automatic capture at ${currentPosition}!`);
+            setStableStatus({ isReady: true });
+          }
+        }
+      } else {
+        if (stableStatus.isReady) {
+          console.log(`🔴 STABLE STATE LOST for ${currentPosition} - Not ready`);
+          setStableStatus({ isReady: false });
+          captureLockRef.current = false; // Reset capture lock when losing stability
+        }
+      }
+    }, 100); // Run 10 times per second for smooth updates
+
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
+  }, [stableStatus.isReady, scanStage, isReady, currentPosition, isNoseAlignedWithTarget]); // Include all dependencies
+
+
+
+
 
   // Handle back navigation
   const handleBack = () => {
@@ -206,12 +359,37 @@ const ScanPage: React.FC = () => {
     }
   };
 
+  // GO/NO-GO Final: Handle ready state
+  const handleReadyClick = useCallback(() => {
+    console.log('🚀 User clicked "I\'m Ready" - Starting scan process');
+    setIsReady(true);
+  }, []);
+
   // Handle restart
   const handleRestart = () => {
     clearCapturedImages();
     setCurrentCaptureStep(0);
     setAppStatus('idle');
+    setIsScanComplete(false);
+    setScanStage('alignment'); // Reset to alignment stage
+    setIsReady(false); // Reset ready state
   };
+
+  // Reset scan for retake functionality
+  const resetScan = useCallback(() => {
+    clearCapturedImages();
+    setCurrentCaptureStep(0);
+    setAppStatus('idle');
+    setIsScanComplete(false);
+    setFlashing(false);
+    stabilityCounterRef.current = 0;
+    badFrameCounterRef.current = 0;
+    setStableStatus({ isReady: false });
+    setStabilityProgress(0);
+    captureLockRef.current = false;
+    setScanStage('alignment'); // Reset to alignment stage
+    setIsReady(false); // Reset ready state
+  }, [clearCapturedImages, setCurrentCaptureStep, setAppStatus]);
 
   if (isProcessing) {
     return (
@@ -228,58 +406,13 @@ const ScanPage: React.FC = () => {
     );
   }
 
-  if (isComplete) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="max-w-md w-full text-center">
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <CheckCircle className="w-16 h-16 text-clinical-green mx-auto mb-6" />
-            <h2 className="text-h2 text-midnight-blue mb-4">Scan Complete!</h2>
-            <p className="text-body text-medium-grey mb-8">
-              We've captured all three angles. Your analysis is being processed.
-            </p>
-            
-            <div className="grid grid-cols-3 gap-2 mb-8">
-              {capturedImages.map((img, index) => (
-                <div key={index} className="relative">
-                  <img
-                    src={img.dataUrl}
-                    alt={`${img.position} view`}
-                    className="w-full h-20 object-cover rounded border"
-                  />
-                  <div className="absolute top-1 left-1 bg-clinical-green text-white text-xs px-1 rounded">
-                    {img.position}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-4">
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={() => processAnalysis()}
-              >
-                View Analysis
-              </Button>
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={handleRestart}
-              >
-                Retake Photos
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Remove conditional rendering - use persistent layout instead
 
   return (
-    <div className="min-h-screen bg-midnight-blue">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
+    <div className="relative w-full h-screen overflow-hidden bg-midnight-blue">
+      
+      {/* Header - Always visible */}
+      <div className="bg-white shadow-sm relative z-10">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <button
             onClick={handleBack}
@@ -307,8 +440,8 @@ const ScanPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="bg-white border-b">
+      {/* Progress Bar - Always visible */}
+      <div className="bg-white border-b relative z-10">
         <div className="max-w-6xl mx-auto px-4 py-2">
           <div className="w-full bg-light-border-grey rounded-full h-2">
             <div 
@@ -319,219 +452,91 @@ const ScanPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
+      {/* GO/NO-GO Final: Immersive Full-Screen Camera Experience */}
+      <div className={`absolute inset-0 top-[120px] transition-opacity duration-500 ${isScanComplete ? 'opacity-20' : 'opacity-100'}`}>
+        <div className="w-full h-full bg-black">
+          {/* Immersive Camera Container - No borders, pure full-screen */}
+          <div className="relative w-full h-full overflow-hidden">
+            {/* DUAL ARCHITECTURE: Display + Processing */}
             
-            {/* Camera Section */}
-            <div className="lg:col-span-3">
-              <div className="bg-white rounded-lg p-6 h-full">
-                <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
-                  {/* Stable camera mount - always rendered */}
-                  <div className={`transition-opacity duration-500 ${isCameraReady ? 'opacity-100' : 'opacity-0'}`}>
-                    <VisionCamera
-                      onCapture={handleCapture}
-                      onStatusUpdate={handleStatusUpdate}
-                      onReady={() => setCameraReady(true)}
-                      className="w-full h-full"
-                    />
-                  </div>
-
-                  {/* Overlay shown until camera is ready */}
-                  {!isCameraReady && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white bg-black">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-bronze"></div>
-                      <p className="mt-4 text-medium-grey">Initializing Camera</p>
-                      <p className="text-sm text-gray-500">Please allow camera access</p>
-                    </div>
-                  )}
-
-                  {/* Position Indicator Overlay */}
-                  <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
-                    <div className="bg-midnight-blue bg-opacity-80 text-white px-4 py-2 rounded-lg">
-                      <div className="text-center">
-                        <Camera className="w-6 h-6 mx-auto mb-1" />
-                        <p className="text-sm font-semibold">{currentPosition.toUpperCase()}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {showHelpMessage && (
-                  <div className="mt-4 p-4 bg-alert-red bg-opacity-10 border border-alert-red rounded-lg">
-                    <p className="text-label text-alert-red">
-                      Having trouble? Make sure your face is centered and well-lit. Try moving closer to the camera and avoid backlighting.
-                    </p>
-                  </div>
-                )}
-              </div>
+            {/* DisplayCamera - Pure video display with real-time face mesh */}
+            <div className={`transition-opacity duration-700 ${isCameraReady ? 'opacity-100' : 'opacity-0'}`}>
+              <DisplayCamera
+                onReady={() => setCameraReady(true)}
+                videoRef={videoRef}
+                onCameraError={(error) => {
+                  console.error('Camera error:', error);
+                  setAppStatus('error');
+                }}
+                showGuidanceOverlay={false}
+                className="w-full h-full"
+                landmarks={currentLandmarks}
+                scanStage={scanStage}
+                currentCaptureStep={currentCaptureStep}
+                isFaceDetected={visionStatusRef.current?.isFaceDetected || false}
+                isAligned={visionStatusRef.current?.isAligned || false}
+                isLightingGood={visionStatusRef.current?.isLightingGood || false}
+              />
             </div>
+            
+            {/* ProcessingEngine - Invisible MediaPipe analysis */}
+            <ProcessingEngine
+              videoRef={videoRef}
+              statusRef={visionStatusRef}
+              isEnabled={isCameraReady && !isComplete}
+            />
+            
+            {/* Hidden canvas for automatic capture */}
+            <canvas
+              ref={canvasRef}
+              className="hidden"
+            />
 
-            {/* Status Panel */}
-            <div className="space-y-6">
-              {/* Instructions */}
-              <div className="bg-white rounded-lg p-6">
-                <h3 className="text-body font-semibold text-midnight-blue mb-4">
-                  Instructions
-                </h3>
-                <p className="text-label text-medium-grey mb-4">
-                  {instructions}
-                </p>
-                
-                {/* Capture Requirements */}
-                <div className="space-y-2">
-                  <IndicatorPill
-                    label="Face Detection"
-                    text={currentStatus.isFaceDetected ? "Detected" : "Not Found"}
-                    status={currentStatus.isFaceDetected ? "success" : "error"}
-                  />
-                  <IndicatorPill
-                    label="Position"
-                    text={currentStatus.isAligned ? "Aligned" : "Adjust"}
-                    status={currentStatus.isAligned ? "success" : "default"}
-                  />
-                  <IndicatorPill
-                    label="Lighting"
-                    text={currentStatus.isLightingGood ? "Good" : "Poor"}
-                    status={currentStatus.isLightingGood ? "success" : "error"}
-                  />
-                </div>
-
-                {/* Capture Readiness */}
-                <div className="mt-4 p-3 rounded-lg border-2 border-dashed" style={{
-                  borderColor: currentStatus.isFaceDetected && currentStatus.isAligned && currentStatus.isLightingGood 
-                    ? '#2E7D32' : '#C5A475',
-                  backgroundColor: currentStatus.isFaceDetected && currentStatus.isAligned && currentStatus.isLightingGood 
-                    ? '#2E7D3210' : '#C5A47510'
-                }}>
-                  <div className="text-center">
-                    <div className={`text-label font-semibold ${
-                      currentStatus.isFaceDetected && currentStatus.isAligned && currentStatus.isLightingGood 
-                        ? 'text-clinical-green' : 'text-bronze'
-                    }`}>
-                      {currentStatus.isFaceDetected && currentStatus.isAligned && currentStatus.isLightingGood 
-                        ? '✓ Ready to Capture' : '○ Preparing...'}
-                    </div>
-                  </div>
-                </div>
+            {/* Overlay shown until camera is ready */}
+            {!isCameraReady && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white bg-black z-30">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-bronze mb-6"></div>
+                <h2 className="text-h2 text-white mb-2">Initializing Camera</h2>
+                <p className="text-body text-gray-300">Please allow camera access</p>
               </div>
+            )}
 
-              {/* Live Debug Panel */}
-              <div className="bg-white rounded-lg p-6">
-                <h3 className="text-body font-semibold text-midnight-blue mb-4">
-                  Live Debug Panel
-                </h3>
-                <div className="space-y-2 text-label">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-medium-grey">Yaw:</span>
-                      <span className="text-midnight-blue font-mono ml-2">
-                        {(currentStatus.yaw ?? 0).toFixed(2)}°
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-medium-grey">Pitch:</span>
-                      <span className="text-midnight-blue font-mono ml-2">
-                        {(currentStatus.pitch ?? 0).toFixed(2)}°
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-medium-grey">Roll:</span>
-                      <span className="text-midnight-blue font-mono ml-2">
-                        {(currentStatus.roll ?? 0).toFixed(2)}°
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-medium-grey">Brightness:</span>
-                      <span className="text-midnight-blue font-mono ml-2">
-                        {(currentStatus.averageBrightness ?? 0).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-medium-grey">Std Dev:</span>
-                      <span className="text-midnight-blue font-mono ml-2">
-                        {(currentStatus.standardDeviation ?? 0).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Captured Images */}
-              <div className="bg-white rounded-lg p-6">
-                <h3 className="text-body font-semibold text-midnight-blue mb-4">
-                  Progress ({capturedImages.length}/3)
-                </h3>
-                
-                <div className="space-y-2">
-                  {capturePositions.map((position, index) => {
-                    const captured = capturedImages.find(img => img.position === position);
-                    const isCurrent = index === currentCaptureStep;
-                    
-                    return (
-                      <div 
-                        key={position}
-                        className={`flex items-center p-3 rounded-lg border ${
-                          captured ? 'border-clinical-green bg-clinical-green bg-opacity-10' :
-                          isCurrent ? 'border-bronze bg-bronze bg-opacity-10' :
-                          'border-light-border-grey bg-light-border-grey bg-opacity-10'
-                        }`}
-                      >
-                        <div className={`w-3 h-3 rounded-full mr-3 ${
-                          captured ? 'bg-clinical-green' :
-                          isCurrent ? 'bg-bronze' :
-                          'bg-medium-grey'
-                        }`} />
-                        <span className="text-label font-medium text-midnight-blue capitalize">
-                          {position} View
-                        </span>
-                        {captured && (
-                          <CheckCircle className="w-4 h-4 text-clinical-green ml-auto" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Client Info */}
-              {clientInfo && (
-                <div className="bg-white rounded-lg p-6">
-                  <h3 className="text-body font-semibold text-midnight-blue mb-4">
-                    Client
-                  </h3>
-                  <div className="space-y-2 text-label">
-                    <div>
-                      <span className="text-medium-grey">Name:</span>
-                      <br />
-                      <span className="text-midnight-blue font-medium">
-                        {clientInfo.firstName} {clientInfo.lastName}
-                      </span>
-                    </div>
-                    {clientInfo.phone && (
-                      <div>
-                        <span className="text-medium-grey">Phone:</span>
-                        <br />
-                        <span className="text-midnight-blue font-medium">
-                          {clientInfo.phone}
-                        </span>
-                      </div>
-                    )}
-                    <div>
-                      <span className="text-medium-grey">Type:</span>
-                      <br />
-                      <span className={`font-medium ${clientInfo.isReturning ? 'text-clinical-green' : 'text-bronze'}`}>
-                        {clientInfo.isReturning ? 'Returning Client' : 'New Client'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* GO/NO-GO Final: Integrated Camera Overlay UI with Facial Anchor Line System */}
+            {isCameraReady && (
+              <CameraOverlayUI
+                scanStage={scanStage}
+                currentCaptureStep={currentCaptureStep}
+                capturePositions={capturePositions}
+                capturedImages={capturedImages}
+                isFaceDetected={visionStatusRef.current?.isFaceDetected || false}
+                isAligned={visionStatusRef.current?.isAligned || false}
+                isLightingGood={visionStatusRef.current?.isLightingGood || false}
+                landmarks={currentLandmarks}
+                isReady={isReady}
+                onReadyClick={handleReadyClick}
+                stabilityProgress={stabilityProgress}
+                stableStatus={stableStatus}
+              />
+            )}
           </div>
         </div>
       </div>
+
+      {/* Professional Shutter Flash - Temporary overlay */}
+      {isFlashing && (
+        <div className="absolute inset-0 bg-white z-20"></div>
+      )}
+
+      {/* Scan Complete Modal - Final overlay */}
+      {isScanComplete && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-30">
+          <ScanCompleteModal
+            capturedImages={capturedImages}
+            onViewAnalysis={() => processAnalysis()}
+            onRetake={resetScan}
+          />
+        </div>
+      )}
     </div>
   );
 };

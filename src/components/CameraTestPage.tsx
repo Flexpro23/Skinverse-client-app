@@ -17,10 +17,7 @@ const CameraTestPage: React.FC = () => {
   });
   const [showCamera, setShowCamera] = useState(false);
 
-  const handleCapture = useCallback((imageData: string) => {
-    console.log('Image captured:', imageData.substring(0, 50) + '...');
-    setCapturedImages(prev => [...prev, imageData]);
-  }, []);
+  // handleCapture removed since VisionCamera now uses automatic capture only
 
   const handleStatusUpdate = useCallback((status: VisionCameraStatus) => {
     setCurrentStatus(status);
@@ -64,7 +61,6 @@ const CameraTestPage: React.FC = () => {
                 <h2 className="text-h2 text-midnight-blue mb-4">Live Camera Feed</h2>
                 <div className="aspect-video bg-black rounded-lg overflow-hidden">
                   <VisionCamera
-                    onCapture={handleCapture}
                     onStatusUpdate={handleStatusUpdate}
                     className="w-full h-full"
                     onReady={() => { /* no-op */ }}

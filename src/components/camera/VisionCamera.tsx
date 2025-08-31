@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Camera, CameraOff, RotateCcw, Zap, ZapOff } from 'lucide-react';
+import { CameraOff, RotateCcw, Zap, ZapOff } from 'lucide-react';
 import { IndicatorPill } from '../shared';
 import type { HeadPose, LightingQuality } from '../../utils/visionUtils';
 import { useMediaPipeFaceMesh } from '../../hooks/useMediaPipeFaceMesh';
@@ -20,22 +20,28 @@ export interface VisionCameraStatus {
 }
 
 export interface VisionCameraProps {
-  onCapture: (imageData: string) => void;
   onStatusUpdate: (status: VisionCameraStatus) => void;
   className?: string;
   onReady: () => void;
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
+  canvasRef?: React.RefObject<HTMLCanvasElement | null>;
 }
 
 const VisionCamera: React.FC<VisionCameraProps> = ({
-  onCapture,
   onStatusUpdate,
   className = '',
   onReady,
+  videoRef: externalVideoRef,
+  canvasRef: externalCanvasRef,
 }) => {
   // Refs for video and canvas elements
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const internalVideoRef = useRef<HTMLVideoElement>(null);
+  const internalCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // Use external refs if provided, otherwise use internal refs
+  const videoRef = externalVideoRef || internalVideoRef;
+  const canvasRef = externalCanvasRef || internalCanvasRef;
   
   // Component state
   const [isInitialized, setIsInitialized] = useState(false);
@@ -173,38 +179,7 @@ const VisionCamera: React.FC<VisionCameraProps> = ({
     }
   }, [cameraFacing, isFlashOn]);
 
-  /**
-   * Capture current frame
-   */
-  const captureFrame = useCallback(() => {
-    console.log('Manual capture triggered - Quality check:', {
-      isFaceDetected: currentStatus.isFaceDetected,
-      isAligned: currentStatus.isAligned, 
-      isLightingGood: currentStatus.isLightingGood
-    });
-    
-    if (!videoRef.current || !canvasRef.current) return;
-    
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    
-    if (!context) return;
-    
-    // Set canvas dimensions to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    
-    // Draw current video frame to canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    // Get image data as base64
-    const imageData = canvas.toDataURL('image/jpeg', 0.9);
-    
-    console.log('Image captured successfully, calling onCapture');
-    // Call the onCapture callback
-    onCapture(imageData);
-  }, [onCapture, currentStatus]);
+  // Manual capture function removed - now using automatic capture only
 
   /**
    * Handle MediaPipe face analysis results
@@ -378,19 +353,13 @@ const VisionCamera: React.FC<VisionCameraProps> = ({
           )}
         </div>
         
-        {/* Center capture button */}
-        <button
-          onClick={captureFrame}
-          disabled={!currentStatus.isFaceDetected || !currentStatus.isAligned || !currentStatus.isLightingGood}
-          className={`w-16 h-16 rounded-full border-4 border-white bg-bronze flex items-center justify-center transition-all ${
-            currentStatus.isFaceDetected && currentStatus.isAligned && currentStatus.isLightingGood
-              ? 'hover:scale-110 active:scale-95'
-              : 'opacity-50 cursor-not-allowed'
-          }`}
-          title="Capture Frame"
-        >
-          <Camera className="w-8 h-8 text-white" />
-        </button>
+        {/* Center area - no manual capture button (automatic capture only) */}
+        <div className="flex-1 flex justify-center">
+          <div className="text-white text-center bg-midnight-blue bg-opacity-60 rounded-lg px-4 py-2">
+            <div className="text-sm font-semibold">Automatic Capture</div>
+            <div className="text-xs opacity-80">Hold position to capture</div>
+          </div>
+        </div>
         
         {/* Right controls (placeholder for future features) */}
         <div className="w-12"></div>
