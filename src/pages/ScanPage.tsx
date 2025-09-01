@@ -8,7 +8,7 @@ import CameraOverlayUI from '../components/camera/CameraOverlayUI';
 import ScanCompleteModal from '../components/camera/ScanCompleteModal';
 import { AnimatedLogo } from '../components/shared';
 import { useAppActions, useClientInfo, useCapturedImages, useCurrentCaptureStep } from '../store/useAppStore';
-import { fileToBase64, getSkinAnalysis } from '../api/gemini';
+import { processFullAnalysis } from '../services/aiAnalysisService';
 
 type CapturePosition = 'center' | 'left' | 'right';
 type ScanStage = 'alignment' | 'capture';
@@ -22,7 +22,7 @@ const ScanPage: React.FC = () => {
   const { 
     addCapturedImage, 
     setCurrentCaptureStep, 
-    setAnalysisResult, 
+    // setAnalysisResult, // Not needed - we navigate directly to report 
     setAppStatus,
     clearCapturedImages
   } = useAppActions();
@@ -97,7 +97,7 @@ const ScanPage: React.FC = () => {
 
 
 
-  // Process skin analysis with Gemini - stabilized with useCallback
+  // Process skin analysis with AI backend - New Pipeline Integration
   const processAnalysis = useCallback(async () => {
     if (capturedImages.length < 3) return;
 
@@ -105,63 +105,63 @@ const ScanPage: React.FC = () => {
     setAppStatus('analyzing');
 
     try {
-      // Convert all images to base64
-      const base64Images = await Promise.all(
-        capturedImages.map(async (img) => await fileToBase64(img.blob))
-      );
-
-      // Get analysis from Gemini
-      const analysisResult = await getSkinAnalysis(base64Images);
+      console.log('🚀 Starting AI Analysis Pipeline...');
       
-      if (analysisResult) {
-        setAnalysisResult(analysisResult);
+      // Prepare client profile from stored info
+      const clientProfile = {
+        firstName: clientInfo?.firstName || 'Client',
+        lastName: clientInfo?.lastName || 'User',
+        phone: clientInfo?.phone || '+1234567890',
+        email: clientInfo?.email,
+        age: clientInfo?.age || 30,
+        concerns: ['general_analysis'] // Could be enhanced based on pre-scan questionnaire
+      };
+      
+      console.log('🔍 DEBUG: Client info from store:', clientInfo);
+      console.log('🔍 DEBUG: Client profile being sent to AI:', clientProfile);
 
-        // Save to Firebase if client is registered
-        if (clientInfo && clientInfo.clientId) {
-          const { uploadScanImages, saveScanResult } = await import('../services/firebase');
-          // Upload images to storage
-          const centerBlob = capturedImages.find(img => img.position === 'center')?.blob;
-          const leftBlob = capturedImages.find(img => img.position === 'left')?.blob;
-          const rightBlob = capturedImages.find(img => img.position === 'right')?.blob;
-
-          if (!centerBlob || !leftBlob || !rightBlob) {
-            throw new Error('Missing captured images for upload');
+      // Use the complete AI analysis pipeline - NO FALLBACK
+      const analysisResult = await processFullAnalysis(
+        'skinverse-clinic', // clinicId
+        clientProfile,
+        capturedImages
+      );
+      
+      if (analysisResult.success && analysisResult.reportId) {
+        console.log('✅ AI analysis completed successfully:', analysisResult);
+        
+        // Navigate to the report page with the new reportId
+        navigate(`/analysis-report/${analysisResult.reportId}`);
+      } else {
+        console.error('💥 AI analysis failed:', analysisResult);
+        
+        // Navigate to error page with detailed error information
+        navigate('/analysis-error', {
+          state: {
+            type: analysisResult.error || 'unknown',
+            message: analysisResult.message,
+            details: analysisResult.details,
+            reportId: analysisResult.reportId
           }
-
-          const imageUrls = await uploadScanImages(
-            'skinverse-clinic', // clinicId
-            clientInfo.clientId,
-            {
-              center: centerBlob,
-              left: leftBlob,
-              right: rightBlob
-            }
-          );
-
-          if (imageUrls) {
-            // Save scan result
-            await saveScanResult(
-              'skinverse-clinic',
-              clientInfo.clientId,
-              {
-                performedByDevice: 'skinverse-tablet-001',
-                imageUrls,
-                analysisResult
-              }
-            );
-          }
-        }
-
-        // Navigate to analysis-report page
-        navigate('/analysis-report');
+        });
       }
+
     } catch (error) {
-      console.error('Error processing analysis:', error);
+      console.error('💥 Critical error in analysis pipeline:', error);
       setAppStatus('error');
+      
+      // Navigate to error page for critical errors
+      navigate('/analysis-error', {
+        state: {
+          type: 'unknown',
+          message: 'A critical error occurred during processing',
+          details: error instanceof Error ? error.message : 'Unknown critical error'
+        }
+      });
     } finally {
       setIsProcessing(false);
     }
-  }, [capturedImages, clientInfo, setAnalysisResult, setAppStatus, navigate]);
+  }, [capturedImages, clientInfo, setAppStatus, navigate]);
 
   // Handle image capture - stabilized to prevent re-renders
   const handleCapture = useCallback(async (imageData: string) => {

@@ -13,6 +13,7 @@ const WelcomePage: React.FC = () => {
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [age, setAge] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -34,8 +35,16 @@ const WelcomePage: React.FC = () => {
       newErrors.phone = 'Please enter a valid phone number';
     }
 
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!email.trim()) {
+      newErrors.email = 'Email address is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!age.trim()) {
+      newErrors.age = 'Age is required';
+    } else if (isNaN(Number(age)) || Number(age) < 13 || Number(age) > 120) {
+      newErrors.age = 'Please enter a valid age (13-120)';
     }
 
     setErrors(newErrors);
@@ -60,7 +69,8 @@ const WelcomePage: React.FC = () => {
           firstName: existingClient.firstName,
           lastName: existingClient.lastName,
           phone: existingClient.phone,
-          email: existingClient.email,
+          email: existingClient.email || '',
+          age: existingClient.age || 25, // Default age if not stored
           isReturning: true,
           clientId: phone.replace(/[^0-9]/g, '')
         });
@@ -70,7 +80,8 @@ const WelcomePage: React.FC = () => {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           phone: phone.trim(),
-          email: email.trim()
+          email: email.trim(),
+          age: Number(age)
         });
 
         if (clientId) {
@@ -79,6 +90,7 @@ const WelcomePage: React.FC = () => {
             lastName: lastName.trim(),
             phone: phone.trim(),
             email: email.trim(),
+            age: Number(age),
             isReturning: false,
             clientId
           });
@@ -104,8 +116,9 @@ const WelcomePage: React.FC = () => {
     setClientInfo({
       firstName: 'Guest',
       lastName: 'User',
-      phone: '',
-      email: '',
+      phone: '+1234567890',
+      email: 'guest@example.com',
+      age: 25,
       isReturning: false
     });
     setAuthenticated(false);
@@ -175,14 +188,27 @@ const WelcomePage: React.FC = () => {
             />
 
             <InputField
-              label="Email (Optional)"
+              label="Email Address"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               error={errors.email}
               placeholder="jane@example.com"
-              helperText="For updates and recommendations"
+              helperText="Required for report delivery"
               disabled={isLoading}
+            />
+
+            <InputField
+              label="Age"
+              type="number"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              error={errors.age}
+              placeholder="25"
+              helperText="Required for accurate skin analysis"
+              disabled={isLoading}
+              min={13}
+              max={120}
             />
           </div>
 

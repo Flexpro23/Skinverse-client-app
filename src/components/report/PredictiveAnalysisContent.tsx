@@ -7,48 +7,51 @@ interface ProjectionData {
   keyFeatures: string[];
   expectedChanges?: string[];
   preventionOpportunities?: string[];
+  interventionImpact?: string;
 }
 
 interface PredictiveAnalysisContentProps {
   currentProjection: ProjectionData;
+  threeYearProjection?: ProjectionData;
   fiveYearProjection: ProjectionData;
+  tenYearProjection?: ProjectionData;
 }
 
 const PredictiveAnalysisContent: React.FC<PredictiveAnalysisContentProps> = ({
   currentProjection,
-  fiveYearProjection
+  threeYearProjection,
+  fiveYearProjection,
+  tenYearProjection
 }) => {
   const [activeTimeframe, setActiveTimeframe] = useState<'now' | 'three' | 'five' | 'ten'>('now');
   
-  // Generate timeline data
+  // Generate timeline data using real AI projections
   const timelineData = {
     now: {
       title: 'Current Status',
-      skinAge: 35,
+      skinAge: currentProjection.skinAge || currentProjection.projectedSkinAge || 35,
       features: currentProjection.keyFeatures,
       description: 'Your skin\'s current condition based on comprehensive analysis.'
     },
     three: {
       title: '3 Years',
-      skinAge: 38,
-      features: [
-        'Slight increase in fine line visibility',
-        'Potential deepening of existing pigmentation',
-        'Gradual loss of skin firmness',
-        'Continued good overall skin health with care'
+      skinAge: threeYearProjection?.projectedSkinAge || (currentProjection.skinAge || 35) + 3,
+      features: threeYearProjection?.expectedChanges || threeYearProjection?.keyFeatures || [
+        'Expected changes based on current skin condition',
+        'Progression of existing concerns if untreated'
       ],
       description: 'Expected changes with current routine and moderate intervention.'
     },
     five: {
       title: '5 Years', 
-      skinAge: fiveYearProjection.projectedSkinAge || 42,
-      features: fiveYearProjection.expectedChanges || [],
+      skinAge: fiveYearProjection.projectedSkinAge || (currentProjection.skinAge || 35) + 7,
+      features: fiveYearProjection.expectedChanges || fiveYearProjection.keyFeatures || [],
       description: 'Projected development with proactive skin care management.'
     },
     ten: {
       title: '10 Years',
-      skinAge: 47,
-      features: [
+      skinAge: tenYearProjection?.projectedSkinAge || (currentProjection.skinAge || 35) + 12,
+      features: tenYearProjection?.expectedChanges || tenYearProjection?.keyFeatures || [
         'Noticeable aging signs without intervention',
         'Significant volume loss potential',
         'Advanced pigmentation concerns',

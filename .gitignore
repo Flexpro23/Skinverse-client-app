@@ -27,6 +27,17 @@ node_modules/.tmp/
 .firebase/
 firebase-debug.log
 
+# Service Account Keys (SECURITY CRITICAL)
+serviceAccountKey.json
+**/serviceAccountKey.json
+*.json
+!package.json
+!package-lock.json
+!firebase.json
+!.firebaserc
+!tsconfig.json
+!vite.config.ts
+
 # Logs
 logs
 *.log

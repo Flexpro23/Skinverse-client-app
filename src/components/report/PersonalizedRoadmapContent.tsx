@@ -55,7 +55,16 @@ const PersonalizedRoadmapContent: React.FC<PersonalizedRoadmapContentProps> = ({
           {roadmap.immediateActions.map((action, index) => (
             <div key={index} className="bg-gray-50 rounded-lg p-6 border-l-4 border-bronze">
               <div className="flex items-start justify-between mb-2">
-                <h4 className="font-medium text-midnight-blue">{action.category}</h4>
+                <div>
+                  <h4 className="font-medium text-midnight-blue">
+                    {action.action.includes('sunscreen') || action.action.includes('SPF') ? 'Sunscreen' :
+                     action.action.includes('hyaluronic') || action.action.includes('serum') ? 'Hydrating Serum' :
+                     action.action.includes('moisturizer') || action.action.includes('moisturizing') ? 'Moisturizer' :
+                     action.action.includes('cleanser') || action.action.includes('cleansing') ? 'Cleanser' :
+                     action.category}
+                  </h4>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Homecare</p>
+                </div>
                 <span className="text-xs bg-bronze text-white px-2 py-1 rounded">{action.frequency}</span>
               </div>
               <p className="text-sm text-gray-600 mb-3">{action.action}</p>

@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
-import type { ConfirmationResult } from 'firebase/auth';
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import type { ConfirmationResult, User } from 'firebase/auth';
 import { initializeFirestore, doc, getDoc, setDoc, collection, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { Timestamp, FieldValue } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -47,6 +47,7 @@ export interface ClientProfile {
   lastName: string;
   phone: string;
   email?: string;
+  age?: number;
   createdAt: Timestamp | FieldValue;
   lastSeenAt: Timestamp | FieldValue;
 }
@@ -191,6 +192,34 @@ export const updateClientLastSeen = async (clinicId: string, clientId: string): 
 };
 
 /**
+ * Ensure user is authenticated (anonymous auth as fallback)
+ */
+export const ensureAuthenticated = async (): Promise<User> => {
+  return new Promise((resolve, reject) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      unsubscribe();
+      
+      if (user) {
+        // User is already authenticated
+        console.log('✅ User already authenticated:', user.uid);
+        resolve(user);
+      } else {
+        // Sign in anonymously for storage access
+        try {
+          console.log('🔐 Signing in anonymously for storage access...');
+          const userCredential = await signInAnonymously(auth);
+          console.log('✅ Anonymous authentication successful:', userCredential.user.uid);
+          resolve(userCredential.user);
+        } catch (error) {
+          console.error('❌ Anonymous authentication failed:', error);
+          reject(error);
+        }
+      }
+    });
+  });
+};
+
+/**
  * Upload images to Firebase Storage
  */
 export const uploadScanImages = async (
@@ -199,6 +228,8 @@ export const uploadScanImages = async (
   images: { center: Blob; left: Blob; right: Blob }
 ): Promise<{ center: string; left: string; right: string } | null> => {
   try {
+    console.log('📤 Uploading images to Firebase Storage (Development Mode)...');
+    
     const timestamp = Date.now();
     const scanId = `scan_${timestamp}`;
     

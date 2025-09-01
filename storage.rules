@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules for Skinverse (Development Mode)
+service firebase.storage {
+  match /b/{bucket}/o {
+    // DEVELOPMENT: Allow all read/write operations 
+    // TODO: Implement proper security rules for production
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}

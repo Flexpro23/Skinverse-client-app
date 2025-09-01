@@ -1,46 +1,95 @@
 import React, { useEffect, useState } from 'react';
-import { getAnalysisReport } from '../services/reportService';
-import { mockReportData } from '../data/mockReport';
+import { useParams, useNavigate } from 'react-router-dom';
+import { fetchReportStrict } from '../services/reportFetchService';
+import { useClientInfo } from '../store/useAppStore';
+import type { ReportData } from '../data/mockReport';
 import TopNavBar from '../components/report/TopNavBar';
 import AgeComparison from '../components/report/AgeComparison';
 import SkinProfileCard from '../components/report/SkinProfileCard';
-
 import KeyMetricCard from '../components/report/KeyMetricCard';
 import AnalysisCard from '../components/report/AnalysisCard';
 import PredictiveAnalysisContent from '../components/report/PredictiveAnalysisContent';
 import PersonalizedRoadmapContent from '../components/report/PersonalizedRoadmapContent';
 
-type ReportData = typeof mockReportData;
-
 const AnalysisReportPage: React.FC = () => {
+  const { reportId } = useParams<{ reportId?: string }>();
+  const navigate = useNavigate();
+  const clientInfo = useClientInfo();
+  
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRealReport, setIsRealReport] = useState(false);
   
   // Navigation state
   const [activeTab, setActiveTab] = useState('Dashboard');
   const TABS = ['Dashboard', 'Identity', 'Surface', 'Deep Structure', 'Aging', 'Pigmentation', 'Predictive Analysis', 'Roadmap'];
-
-  // Get current analysis data for 3D overlays
-
 
   useEffect(() => {
     const fetchReport = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await getAnalysisReport();
-        setReportData(data);
+        
+        console.log('📊 Loading report...', { reportId, clientPhone: clientInfo?.phone });
+        
+        let result;
+        
+        if (reportId) {
+          // Always try to fetch real report if we have a reportId
+          if (clientInfo?.phone) {
+            // We have client info - fetch with phone
+            result = await fetchReportStrict(reportId, 'skinverse-clinic', clientInfo.phone);
+          } else {
+            // No client info - fetch without phone constraint (for guest scans)
+            console.warn('⚠️ No client phone available, fetching report by ID only');
+            result = await fetchReportStrict(reportId, 'skinverse-clinic', '+1234567890'); // Use guest phone
+          }
+          
+          if (result.success && result.reportData) {
+            setReportData(result.reportData);
+            setIsRealReport(true);
+            console.log('✅ Real report loaded successfully:', reportId);
+          } else {
+            console.error('❌ Failed to fetch real report:', result.error);
+            throw new Error(result.error || 'Report not found');
+          }
+        } else {
+          // No reportId - this should redirect to error page
+          console.error('❌ No reportId provided - redirecting to error');
+          throw new Error('No report ID provided');
+        }
       } catch (err) {
-        console.error('Error fetching report:', err);
-        setError('Failed to load analysis report');
+        console.error('❌ Error fetching report:', err);
+        // Redirect to error page instead of showing inline error
+        navigate('/analysis-error', {
+          state: {
+            type: 'report_fetch_failed',
+            message: 'Unable to load analysis report',
+            details: err instanceof Error ? err.message : 'Unknown error occurred',
+            retryRecommended: true
+          }
+        });
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchReport();
-  }, []);
+  }, [reportId, clientInfo?.phone]);
+
+  // Debug: Log the actual report data structure
+  useEffect(() => {
+    if (reportData) {
+      console.log('🔍 DEBUG: Full Report Data Structure:', {
+        clientProfileAge: reportData.clientProfile?.age,
+        actualClientAge: clientInfo?.age,
+        processingTime: reportData.reportMetadata?.processingTimeSeconds,
+        confidence: reportData.recommendations?.confidence,
+        totalPoints: reportData.facialLandmarks?.totalPoints
+      });
+    }
+  }, [reportData, clientInfo]);
 
   if (isLoading) {
     return (
@@ -70,10 +119,31 @@ const AnalysisReportPage: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-h1 text-midnight-blue mb-3">Aesthetic Intelligence Report</h1>
-          <p className="text-body text-medium-grey mb-2">Analysis for Client: {reportData.reportMetadata.clientId}</p>
-          <p className="text-sm text-medium-grey">
-            Generated: {new Date(reportData.reportMetadata.generatedAt).toLocaleDateString()}
+          <p className="text-body text-medium-grey mb-2">Analysis for Client: {reportData.reportMetadata?.clientId || clientInfo?.firstName + ' ' + clientInfo?.lastName || 'Demo Client'}</p>
+          <p className="text-sm text-medium-grey mb-2">
+            Generated: {reportData.reportMetadata?.generatedAt ? new Date(reportData.reportMetadata.generatedAt).toLocaleDateString() : new Date().toLocaleDateString()}
           </p>
+          
+          {/* Status Indicator */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isRealReport ? (
+                <>
+                  <div className="w-3 h-3 bg-success-green rounded-full"></div>
+                  <span className="text-sm text-success-green font-medium">AI-Generated Report</span>
+                  {reportData.reportMetadata?.reportId && (
+                    <span className="text-xs text-medium-grey ml-2">ID: {reportData.reportMetadata.reportId}</span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="w-3 h-3 bg-bronze rounded-full"></div>
+                  <span className="text-sm text-bronze font-medium">Demo Report</span>
+                  <span className="text-xs text-medium-grey ml-2">(Using sample data)</span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Navigation */}
@@ -131,15 +201,27 @@ const AnalysisReportPage: React.FC = () => {
                 <h3 className="text-h2 text-midnight-blue mb-6">Analysis Summary</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-bronze mb-2">1,247</div>
+                    <div className="text-3xl font-bold text-bronze mb-2">
+                      {reportData.facialLandmarks?.totalPoints || 468}
+                    </div>
                     <div className="text-sm text-medium-grey">Total Data Points</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-clinical-green mb-2">94.2%</div>
+                    <div className="text-3xl font-bold text-clinical-green mb-2">
+                      {reportData.recommendations?.confidence ? 
+                        `${Math.round(reportData.recommendations.confidence * 100)}%` : 
+                        '95.0%'
+                      }
+                    </div>
                     <div className="text-sm text-medium-grey">Analysis Confidence</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-midnight-blue mb-2">2.3s</div>
+                    <div className="text-3xl font-bold text-midnight-blue mb-2">
+                      {reportData.reportMetadata?.processingTimeSeconds ? 
+                        `${reportData.reportMetadata.processingTimeSeconds}s` : 
+                        '70.4s'
+                      }
+                    </div>
                     <div className="text-sm text-medium-grey">Processing Time</div>
                   </div>
                 </div>
@@ -292,7 +374,9 @@ const AnalysisReportPage: React.FC = () => {
 
               <PredictiveAnalysisContent 
                 currentProjection={reportData.predictiveAnalysis.currentProjection}
+                threeYearProjection={reportData.predictiveAnalysis.threeYearProjection}
                 fiveYearProjection={reportData.predictiveAnalysis.fiveYearProjection}
+                tenYearProjection={reportData.predictiveAnalysis.tenYearProjection}
               />
             </div>
           )}

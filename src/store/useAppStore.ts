@@ -17,7 +17,8 @@ export interface ClientInfo {
   firstName: string;
   lastName: string;
   phone: string;
-  email?: string;
+  email: string;
+  age: number;
   isReturning: boolean;
   clientId?: string;
 }

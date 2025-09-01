@@ -8,7 +8,9 @@ export const mockReportData = {
     generatedAt: "2024-12-01T10:30:00Z",
     version: "3.0",
     analysisType: "comprehensive_skin_analysis",
-    clinicId: "skinverse_clinic_main"
+    clinicId: "skinverse_clinic_main",
+    processingTimeSeconds: 73.2,
+    processingCompletedAt: "2024-12-01T10:31:13.200Z"
   },
   
   clientProfile: {
@@ -156,6 +158,20 @@ export const mockReportData = {
         "Good overall skin health"
       ]
     },
+    threeYearProjection: {
+      timeline: "3_years",
+      projectedSkinAge: 38,
+      keyFeatures: [
+        "Slight increase in fine line visibility",
+        "Potential deepening of existing pigmentation",
+        "Gradual loss of skin firmness"
+      ],
+      expectedChanges: [
+        "Minor progression of existing concerns",
+        "Early signs of volume loss may begin",
+        "Continued manageable aging with care"
+      ]
+    },
     fiveYearProjection: {
       timeline: "5_years",
       projectedSkinAge: 42,
@@ -176,6 +192,22 @@ export const mockReportData = {
         "Proper hydration can improve current dehydration by 80%",
         "Regular chemical peels can reduce pigmentation by 70%"
       ]
+    },
+    tenYearProjection: {
+      timeline: "10_years",
+      projectedSkinAge: 47,
+      keyFeatures: [
+        "Noticeable aging signs without intervention",
+        "Significant volume loss potential",
+        "Advanced pigmentation concerns"
+      ],
+      expectedChanges: [
+        "Significant fine lines and wrinkles if untreated",
+        "Marked volume loss in cheeks and temples",
+        "Pronounced sun damage and pigmentation",
+        "Loss of skin firmness and elasticity"
+      ],
+      interventionImpact: "Following our personalized roadmap can help maintain healthier skin that ages more slowly than predicted, potentially keeping you looking 2-5 years younger."
     }
   },
 
