@@ -14,11 +14,11 @@ export const mockReportData = {
   },
   
   clientProfile: {
-    age: 32,
+    age: 34, // User input age - this should always match user's actual age
     skinType: "Combination",
     fitzpatrickScale: 3,
-    biologicalAge: 32,
-    estimatedSkinAge: 35,
+    biologicalAge: 34, // Must match age exactly
+    estimatedSkinAge: 36, // AI estimate based on visual analysis
     ethnicBackground: "Mediterranean",
     concerns: ["fine_lines", "pigmentation", "hydration"]
   },
@@ -26,9 +26,9 @@ export const mockReportData = {
   keyMetrics: {
     overallSkinHealth: 72,
     skinAge: {
-      biological: 32,
-      estimated: 35,
-      variance: 3
+      biological: 34, // Must match clientProfile.age exactly
+      estimated: 36, // Must match clientProfile.estimatedSkinAge exactly
+      variance: 2 // (estimated - biological) = (36 - 34) = 2
     },
     primaryConcerns: [
       { type: "hydration", severity: "moderate", score: 65 },
@@ -150,7 +150,7 @@ export const mockReportData = {
   predictiveAnalysis: {
     currentProjection: {
       timeline: "current",
-      skinAge: 35,
+      skinAge: 36, // Must match clientProfile.estimatedSkinAge exactly
       keyFeatures: [
         "Mild dehydration in T-zone",
         "Early fine lines around eyes",
@@ -160,7 +160,7 @@ export const mockReportData = {
     },
     threeYearProjection: {
       timeline: "3_years",
-      projectedSkinAge: 38,
+      projectedSkinAge: 39, // Dynamic progression from 36
       keyFeatures: [
         "Slight increase in fine line visibility",
         "Potential deepening of existing pigmentation",
@@ -174,7 +174,7 @@ export const mockReportData = {
     },
     fiveYearProjection: {
       timeline: "5_years",
-      projectedSkinAge: 42,
+      projectedSkinAge: 42, // Progressive aging with moderate care
       keyFeatures: [
         "Increased collagen breakdown",
         "Developing fine lines around eyes",
@@ -195,7 +195,7 @@ export const mockReportData = {
     },
     tenYearProjection: {
       timeline: "10_years",
-      projectedSkinAge: 47,
+      projectedSkinAge: 49, // Long-term projection considering good vs poor care
       keyFeatures: [
         "Noticeable aging signs without intervention",
         "Significant volume loss potential",

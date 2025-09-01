@@ -113,12 +113,23 @@ const ScanPage: React.FC = () => {
         lastName: clientInfo?.lastName || 'User',
         phone: clientInfo?.phone || '+1234567890',
         email: clientInfo?.email,
-        age: clientInfo?.age || 30,
+        age: Number(clientInfo?.age) || 30, // Ensure age is a number
         concerns: ['general_analysis'] // Could be enhanced based on pre-scan questionnaire
       };
+
+      // CRITICAL: Validate age before sending to AI
+      if (!clientProfile.age || clientProfile.age < 13 || clientProfile.age > 120) {
+        console.error('❌ CRITICAL: Invalid age in client profile:', clientProfile.age);
+        throw new Error(`Invalid age: ${clientProfile.age}. Please refresh and enter a valid age.`);
+      }
       
       console.log('🔍 DEBUG: Client info from store:', clientInfo);
       console.log('🔍 DEBUG: Client profile being sent to AI:', clientProfile);
+      console.log('🔍 DEBUG: Age validation passed:', { 
+        originalAge: clientInfo?.age, 
+        processedAge: clientProfile.age, 
+        ageType: typeof clientProfile.age 
+      });
 
       // Use the complete AI analysis pipeline - NO FALLBACK
       const analysisResult = await processFullAnalysis(

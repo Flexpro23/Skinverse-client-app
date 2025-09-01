@@ -360,10 +360,10 @@ CRITICAL: Return ONLY valid JSON in this exact schema - no markdown, no explanat
 
 {
   "clientProfile": {
-    "age": ${clientProfile.age || 30}, // This is their actual chronological age - MUST be exactly ${clientProfile.age || 30}
+    "age": ${clientProfile.age}, // This is their actual chronological age - MUST be exactly ${clientProfile.age}
     "skinType": "string (Oily/Dry/Combination/Normal/Sensitive)",
     "fitzpatrickScale": "number 1-6",
-    "biologicalAge": ${clientProfile.age || 30}, // Same as actual age
+    "biologicalAge": ${clientProfile.age}, // Same as actual age - MUST match exactly
     "estimatedSkinAge": "number", // THIS IS CRITICAL: Your visual estimate of how old their skin appears (analyze the images carefully)
     "ethnicBackground": "string",
     "concerns": ["array of detected concerns"]
@@ -371,7 +371,7 @@ CRITICAL: Return ONLY valid JSON in this exact schema - no markdown, no explanat
   "keyMetrics": {
     "overallSkinHealth": "number 1-100",
     "skinAge": {
-      "biological": ${clientProfile.age || 30}, // Actual chronological age
+      "biological": ${clientProfile.age}, // Actual chronological age - MUST be exactly ${clientProfile.age}
       "estimated": "number", // Your visual assessment of skin age from analyzing the images
       "variance": "number" // Difference between biological and estimated (estimated - biological)
     },
@@ -530,6 +530,16 @@ exports.generateAnalysis = onRequest(async (req, res) => {
         if (!clinicId || !clientProfile || !imageUrls || !Array.isArray(imageUrls) || imageUrls.length !== 3) {
           return res.status(400).json({ 
             error: 'Missing required fields: clinicId, clientProfile, imageUrls (array of 3)' 
+          });
+        }
+
+        // CRITICAL: Validate age is properly provided
+        if (!clientProfile.age || typeof clientProfile.age !== 'number' || clientProfile.age < 13 || clientProfile.age > 120) {
+          console.error('❌ VALIDATION: Invalid age in clientProfile:', clientProfile.age);
+          return res.status(400).json({ 
+            error: 'Invalid age: must be a number between 13 and 120',
+            received: clientProfile.age,
+            type: typeof clientProfile.age
           });
         }
 

@@ -111,20 +111,7 @@ const WelcomePage: React.FC = () => {
     }
   };
 
-  // Handle guest scan (skip client info)
-  const handleGuestScan = () => {
-    setClientInfo({
-      firstName: 'Guest',
-      lastName: 'User',
-      phone: '+1234567890',
-      email: 'guest@example.com',
-      age: 25,
-      isReturning: false
-    });
-    setAuthenticated(false);
-    setAppStatus('idle');
-    navigate('/scan');
-  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -224,23 +211,7 @@ const WelcomePage: React.FC = () => {
               {isLoading ? 'Preparing...' : 'Prepare for Scan'}
             </Button>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-light-border-grey" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-medium-grey">or</span>
-              </div>
-            </div>
 
-            <Button
-              variant="secondary"
-              fullWidth
-              onClick={handleGuestScan}
-              disabled={isLoading}
-            >
-              Run Guest Scan
-            </Button>
           </div>
 
           {/* Info Note */}
